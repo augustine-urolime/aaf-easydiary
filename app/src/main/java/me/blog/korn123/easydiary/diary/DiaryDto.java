@@ -33,6 +33,10 @@ public class DiaryDto extends RealmObject {
 
     private RealmList<PhotoUriDto> photoUris;
 
+    private String fontName;
+
+    private float fontSize;
+
     public DiaryDto() {}
 
     public DiaryDto(int sequence, long currentTimeMillis, String title, String contents) {
@@ -106,5 +110,21 @@ public class DiaryDto extends RealmObject {
 
     public void setPhotoUris(RealmList<PhotoUriDto> photoUris) {
         this.photoUris = photoUris;
+    }
+
+    public String getFontName() {
+        return fontName;
+    }
+
+    public void setFontName(String fontName) {
+        this.fontName = fontName;
+    }
+
+    public float getFontSize() {
+        return fontSize;
+    }
+
+    public void setFontSize(float fontSize) {
+        this.fontSize = fontSize;
     }
 }

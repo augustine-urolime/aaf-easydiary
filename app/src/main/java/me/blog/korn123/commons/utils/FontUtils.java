@@ -64,6 +64,28 @@ public class FontUtils {
         return mTypeface;
     }
 
+    public static Typeface createTypeface(Context context, AssetManager assetManager, String fontName) {
+        Typeface typeface = null;
+        try {
+            String[] fonts = context.getAssets().list("fonts");
+            boolean isEmbeddedFont = false;
+            for (String font : fonts) {
+                if (StringUtils.equals(font, fontName)) {
+                    isEmbeddedFont = true;
+                    break;
+                }
+            }
+            if (isEmbeddedFont) {
+                typeface = Typeface.createFromAsset(assetManager, "fonts/" + fontName);
+            } else {
+                typeface = Typeface.createFromFile(Environment.getExternalStorageDirectory().getAbsolutePath() + Path.USER_CUSTOM_FONTS_DIRECTORY + fontName);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return typeface;
+    }
+
     public static void setToolbarTypeface(Context context, Toolbar toolbar, AssetManager assetManager) {
         for (int i = 0; i < toolbar.getChildCount(); i++) {
             View view = toolbar.getChildAt(i);

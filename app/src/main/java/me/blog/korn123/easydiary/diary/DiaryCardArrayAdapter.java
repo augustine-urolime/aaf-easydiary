@@ -2,6 +2,7 @@ package me.blog.korn123.easydiary.diary;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,7 +15,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 
-import me.blog.korn123.commons.constants.Constants;
 import me.blog.korn123.commons.utils.CommonUtils;
 import me.blog.korn123.commons.utils.DateUtils;
 import me.blog.korn123.commons.utils.EasyDiaryUtils;
@@ -26,32 +26,33 @@ import me.blog.korn123.easydiary.R;
  */
 
 public class DiaryCardArrayAdapter extends ArrayAdapter<DiaryDto> {
-    private final Context context;
-    private final List<DiaryDto> list;
-    private final int layoutResourceId;
-    private String query;
+
+    private final Context mContext;
+    private final List<DiaryDto> mList;
+    private final int mLayoutResourceId;
+    private String mQuery;
 
     public void setCurrentQuery(String query) {
-        this.query = query;
+        this.mQuery = query;
     }
 
     public String getCurrentQuery() {
-        return this.query;
+        return this.mQuery;
     }
 
     public DiaryCardArrayAdapter(Context context, int layoutResourceId, List<DiaryDto> list) {
         super(context, layoutResourceId, list);
-        this.context = context;
-        this.list = list;
-        this.layoutResourceId = layoutResourceId;
+        this.mContext = context;
+        this.mList = list;
+        this.mLayoutResourceId = layoutResourceId;
     }
 
     public View getView(int position, View convertView, ViewGroup parent) {
         View row = convertView;
         ViewHolder holder = null;
         if (row == null) {
-            LayoutInflater inflater = ((Activity)this.context).getLayoutInflater();
-            row = inflater.inflate(this.layoutResourceId, parent, false);
+            LayoutInflater inflater = ((Activity)this.mContext).getLayoutInflater();
+            row = inflater.inflate(this.mLayoutResourceId, parent, false);
             holder = new ViewHolder();
             holder.textView1 = ((TextView)row.findViewById(R.id.text1));
             holder.textView2 = ((TextView)row.findViewById(R.id.text2));
@@ -62,15 +63,8 @@ public class DiaryCardArrayAdapter extends ArrayAdapter<DiaryDto> {
             holder = (ViewHolder)row.getTag();
         }
 
-        initFontStyle(holder);
-        float fontSize = CommonUtils.loadFloatPreference(context, "font_size", 0);
-        if (fontSize > 0) {
-            holder.textView1.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-            holder.textView2.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-            holder.textView3.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-        }
-
-        DiaryDto diaryDto = (DiaryDto)this.list.get(position);
+        DiaryDto diaryDto = mList.get(position);
+        float fontSize = diaryDto.getFontSize() > 0 ? diaryDto.getFontSize() : CommonUtils.loadFloatPreference(mContext, "font_size", (int)holder.textView1.getTextSize());
         if (StringUtils.isEmpty(diaryDto.getTitle())) {
             holder.textView1.setVisibility(View.GONE);
         } else {
@@ -78,22 +72,33 @@ public class DiaryCardArrayAdapter extends ArrayAdapter<DiaryDto> {
         }
         holder.textView1.setText(diaryDto.getTitle());
         holder.textView2.setText(diaryDto.getContents());
+        holder.textView1.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
+        holder.textView2.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
 
-        // highlight current query
-        if (StringUtils.isNotEmpty(query)) {
-            EasyDiaryUtils.highlightString(holder.textView1, query);
-            EasyDiaryUtils.highlightString(holder.textView2, query);
+        // highlight current mQuery
+        if (StringUtils.isNotEmpty(mQuery)) {
+            EasyDiaryUtils.highlightString(holder.textView1, mQuery);
+            EasyDiaryUtils.highlightString(holder.textView2, mQuery);
         }
         holder.textView3.setText(DateUtils.getFullPatternDateWithTime(diaryDto.getCurrentTimeMillis()));
+        holder.textView3.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
         EasyDiaryUtils.initWeatherView(holder.imageView, diaryDto.getWeather());
+        initFontStyle(holder, diaryDto.getFontName());
 
         return row;
     }
 
-    private void initFontStyle(ViewHolder holder) {
-        FontUtils.setTypeface(context, context.getAssets(), holder.textView1);
-        FontUtils.setTypeface(context, context.getAssets(), holder.textView2);
-        FontUtils.setTypeface(context, context.getAssets(), holder.textView3);
+    private void initFontStyle(ViewHolder holder, String fontName) {
+        if (StringUtils.isNotEmpty(fontName)) {
+            Typeface typeface = FontUtils.createTypeface(mContext, mContext.getAssets(), fontName);
+            holder.textView1.setTypeface(typeface);
+            holder.textView2.setTypeface(typeface);
+            holder.textView3.setTypeface(typeface);
+        } else {
+            FontUtils.setTypeface(mContext, mContext.getAssets(), holder.textView1);
+            FontUtils.setTypeface(mContext, mContext.getAssets(), holder.textView2);
+            FontUtils.setTypeface(mContext, mContext.getAssets(), holder.textView3);
+        }
     }
 
     private static class ViewHolder {

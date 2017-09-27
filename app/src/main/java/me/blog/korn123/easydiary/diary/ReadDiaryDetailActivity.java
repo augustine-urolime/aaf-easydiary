@@ -297,17 +297,19 @@ public class ReadDiaryDetailActivity extends EasyDiaryActivity {
 
 //        ViewGroup viewPagerRootView = (ViewGroup) mViewPager.getChildAt(0);
 //        mViewPager.setCurrentItem(2);
-//        float fontSize = ((TextView) viewPagerRootView.findViewById(R.id.title)).getTextSize();
+//        float mFontSize = ((TextView) viewPagerRootView.findViewById(R.id.title)).getTextSize();
         final PlaceholderFragment fragment = mSectionsPagerAdapter.getFragment(mViewPager.getCurrentItem());
         float fontSize = fragment.mTitle.getTextSize();
 
         switch(view.getId()) {
             case R.id.zoomIn:
                 CommonUtils.saveFloatPreference(ReadDiaryDetailActivity.this, "font_size", fontSize + 5);
+                fragment.plusFontSize(5);
                 fragment.setDiaryFontSize();
                 break;
             case R.id.zoomOut:
                 CommonUtils.saveFloatPreference(ReadDiaryDetailActivity.this, "font_size", fontSize - 5);
+                fragment.plusFontSize(-5);
                 fragment.setDiaryFontSize();
                 break;
             case R.id.delete:
@@ -382,6 +384,8 @@ public class ReadDiaryDetailActivity extends EasyDiaryActivity {
         private static final String DIARY_SEQUENCE = "diary_sequence";
         private static final String DIARY_SEARCH_QUERY = "diary_search_query";
         private int mSequence;
+        private String mFontName;
+        private float mFontSize;
 
         @BindView(R.id.contents)
         TextView mContents;
@@ -444,6 +448,8 @@ public class ReadDiaryDetailActivity extends EasyDiaryActivity {
                 EasyDiaryUtils.highlightString(mContents, query);
             }
 
+            mFontName = diaryDto.getFontName();
+            mFontSize = diaryDto.getFontSize();
             int weather = diaryDto.getWeather();
             EasyDiaryUtils.initWeatherView(mWeather, weather);
 
@@ -491,17 +497,28 @@ public class ReadDiaryDetailActivity extends EasyDiaryActivity {
         }
 
         private void setDiaryTypeface() {
-            FontUtils.setTypeface(getContext(), getActivity().getAssets(), mTitle);
-            FontUtils.setTypeface(getContext(), getActivity().getAssets(), mDate);
-            FontUtils.setTypeface(getContext(), getActivity().getAssets(), mContents);
+            if (StringUtils.isNotEmpty(mFontName)) {
+                Typeface typeface = FontUtils.createTypeface(getContext(), getActivity().getAssets(), mFontName);
+                mTitle.setTypeface(typeface);
+                mDate.setTypeface(typeface);
+                mContents.setTypeface(typeface);
+            } else {
+                FontUtils.setTypeface(getContext(), getActivity().getAssets(), mTitle);
+                FontUtils.setTypeface(getContext(), getActivity().getAssets(), mDate);
+                FontUtils.setTypeface(getContext(), getActivity().getAssets(), mContents);
+            }
+        }
+
+        private void plusFontSize(float size) {
+            mFontSize += size;
         }
 
         private void setDiaryFontSize() {
-            float fontSize = CommonUtils.loadFloatPreference(getContext(), "font_size", 0);
-            if (fontSize > 0) {
-                mTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-                mDate.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-                mContents.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
+            mFontSize = mFontSize > 0 ? mFontSize : CommonUtils.loadFloatPreference(getContext(), "font_size", 0);
+            if (mFontSize > 0) {
+                mTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, mFontSize);
+                mDate.setTextSize(TypedValue.COMPLEX_UNIT_PX, mFontSize);
+                mContents.setTextSize(TypedValue.COMPLEX_UNIT_PX, mFontSize);
             }
         }
 

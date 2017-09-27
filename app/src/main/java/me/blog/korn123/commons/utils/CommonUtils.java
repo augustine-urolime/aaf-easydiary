@@ -8,6 +8,13 @@ import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.util.TypedValue;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import me.blog.korn123.easydiary.diary.UpdateDiaryActivity;
+
 /**
  * Created by CHO HANJOONG on 2017-03-16.
  */
@@ -109,5 +116,16 @@ public class CommonUtils {
         }
         cursor.close();
         return path;
+    }
+
+    public static List<String> getAssetFileNames(Context context, String path) {
+        List<String> listFilename = null;
+        try {
+            String[] fonts = context.getAssets().list(path);
+            listFilename = Arrays.asList(fonts);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return listFilename;
     }
 }

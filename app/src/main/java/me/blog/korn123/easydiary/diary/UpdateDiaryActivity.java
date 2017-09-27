@@ -1,6 +1,7 @@
 package me.blog.korn123.easydiary.diary;
 
 import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
@@ -10,16 +11,21 @@ import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.preference.ListPreference;
 import android.speech.RecognizerIntent;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.util.TypedValue;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.DatePicker;
@@ -27,12 +33,15 @@ import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TimePicker;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
@@ -49,6 +58,7 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import io.realm.RealmList;
 import me.blog.korn123.commons.constants.Constants;
+import me.blog.korn123.commons.constants.Path;
 import me.blog.korn123.commons.utils.BitmapUtils;
 import me.blog.korn123.commons.utils.CommonUtils;
 import me.blog.korn123.commons.utils.DateUtils;
@@ -73,6 +83,8 @@ public class UpdateDiaryActivity extends EasyDiaryActivity {
     private int mCurrentCursor = 1;
     private RealmList<PhotoUriDto> mPhotoUris;
     private List<Integer> mRemoveIndexes = new ArrayList<>();
+    private String fontName;
+    private float mFontSize;
 
     @BindView(R.id.contents)
     EditText mContents;
@@ -126,8 +138,8 @@ public class UpdateDiaryActivity extends EasyDiaryActivity {
 
         bindView();
         bindEvent();
-        initFontStyle();
         initData();
+        initFontStyle();
         initDateTime();
         setDateTime();
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
@@ -145,6 +157,9 @@ public class UpdateDiaryActivity extends EasyDiaryActivity {
         mSequence = intent.getIntExtra("sequence", 0);
         DiaryDto diaryDto = DiaryDao.readDiaryBy(mSequence);
         mWeather = diaryDto.getWeather();
+        fontName = diaryDto.getFontName();
+        mFontSize = diaryDto.getFontSize();
+        if (mFontSize == 0) mFontSize = CommonUtils.loadFloatPreference(this, "font_size", (int)mContents.getTextSize());
 
         mTitle.setText(diaryDto.getTitle());
         getSupportActionBar().setSubtitle(DateUtils.getFullPatternDateWithTime(diaryDto.getCurrentTimeMillis()));
@@ -201,13 +216,22 @@ public class UpdateDiaryActivity extends EasyDiaryActivity {
     }
 
     public void initFontStyle() {
-        float fontSize = CommonUtils.loadFloatPreference(UpdateDiaryActivity.this, "font_size", 0);
-        if (fontSize > 0) {
-            mContents.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
+        setDiaryFontSize();
+        if (StringUtils.isNotEmpty(fontName)) {
+            Typeface typeface = FontUtils.createTypeface(UpdateDiaryActivity.this, getAssets(), fontName);
+            mTitle.setTypeface(typeface);
+            mContents.setTypeface(typeface);
+        } else {
+            FontUtils.setTypeface(this, getAssets(), mTitle);
+            FontUtils.setTypeface(this, getAssets(), mContents);
         }
+    }
 
-        FontUtils.setTypeface(this, getAssets(), mTitle);
-        FontUtils.setTypeface(this, getAssets(), mContents);
+    private void setDiaryFontSize() {
+        mTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, mFontSize);
+        mContents.setTextSize(TypedValue.COMPLEX_UNIT_PX, mFontSize);
+        mWeather = mWeatherSpinner.getSelectedItemPosition();
+        initSpinner();
     }
 
     private void bindView() {
@@ -271,20 +295,20 @@ public class UpdateDiaryActivity extends EasyDiaryActivity {
         mToggleSwitch.setChecked(false);
     }
 
-    @OnClick({R.id.speechButton, R.id.zoomIn, R.id.zoomOut, R.id.saveContents, R.id.photoView, R.id.datePicker, R.id.timePicker})
+    @OnClick({R.id.speechButton, R.id.zoomIn, R.id.zoomOut, R.id.saveContents, R.id.photoView, R.id.datePicker, R.id.timePicker, R.id.saveContents2})
     public void onClick(View view) {
-        float fontSize = mContents.getTextSize();
-
         switch(view.getId()) {
             case R.id.speechButton:
                 showSpeechDialog();
                 break;
             case R.id.zoomIn:
-                CommonUtils.saveFloatPreference(UpdateDiaryActivity.this, "font_size", fontSize + 5);
+//                CommonUtils.saveFloatPreference(UpdateDiaryActivity.this, "font_size", fontSize + 5);
+                mFontSize += 5;
                 setDiaryFontSize();
                 break;
             case R.id.zoomOut:
-                CommonUtils.saveFloatPreference(UpdateDiaryActivity.this, "font_size", fontSize - 5);
+//                CommonUtils.saveFloatPreference(UpdateDiaryActivity.this, "font_size", fontSize - 5);
+                mFontSize -= 5;
                 setDiaryFontSize();
                 break;
             case R.id.saveContents:
@@ -301,9 +325,41 @@ public class UpdateDiaryActivity extends EasyDiaryActivity {
                     diaryDto.setWeather(mWeatherSpinner.getSelectedItemPosition());
                     applyRemoveIndex();
                     diaryDto.setPhotoUris(mPhotoUris);
+                    diaryDto.setFontName(fontName);
+                    diaryDto.setFontSize(mFontSize);
                     DiaryDao.updateDiary(diaryDto);
                     finish();
                 }
+                break;
+            case R.id.saveContents2:
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                LayoutInflater inflater = this.getLayoutInflater();
+                View dialogView = inflater.inflate(R.layout.dialog_select_font, null);
+                ListView listView = (ListView)dialogView.findViewById(R.id.listFont);
+                List<String> listFont = new ArrayList<>();
+                listFont.addAll(CommonUtils.getAssetFileNames(UpdateDiaryActivity.this, "fonts"));
+                File fontDir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + Path.USER_CUSTOM_FONTS_DIRECTORY);
+                if (fontDir.exists() && fontDir.list().length > 0) {
+                    for (int i = 0; i < fontDir.list().length; i++) {
+                       listFont.add(fontDir.list()[i]);
+                    }
+                }
+
+                builder.setView(dialogView);
+                final AlertDialog alert = builder.create();
+                final View rootView = findViewById(android.R.id.content);
+                ArrayAdapter arrayAdapter = new ArrayAdapter(UpdateDiaryActivity.this, android.R.layout.simple_list_item_1, listFont);
+                listView.setAdapter(arrayAdapter);
+                listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        fontName = parent.getAdapter().getItem(position).toString();
+                        DialogUtils.makeSnackBar(rootView, fontName);
+                        updateTypeface(fontName);
+                        alert.dismiss();
+                    }
+                });
+                alert.show();
                 break;
             case R.id.photoView:
                 if (PermissionUtils.checkPermission(this, Constants.EXTERNAL_STORAGE_PERMISSIONS)) {
@@ -518,19 +574,18 @@ public class UpdateDiaryActivity extends EasyDiaryActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        FontUtils.setTypeface(this, getAssets(), this.mContents);
-        FontUtils.setTypeface(this, getAssets(), this.mTitle);
+        updateTypeface(fontName);
         setDiaryFontSize();
     }
 
-    private void setDiaryFontSize() {
-        float fontSize = CommonUtils.loadFloatPreference(this, "font_size", 0);
-        if (fontSize > 0) {
-            mTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-            mContents.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-            mWeather = mWeatherSpinner.getSelectedItemPosition();
-            initSpinner();
+    private void updateTypeface(String fontName) {
+        if (StringUtils.isNotEmpty(fontName)) {
+            Typeface typeface = FontUtils.createTypeface(UpdateDiaryActivity.this, getAssets(), fontName);
+            mContents.setTypeface(typeface);
+            mTitle.setTypeface(typeface);
+        } else {
+            FontUtils.setTypeface(this, getAssets(), this.mContents);
+            FontUtils.setTypeface(this, getAssets(), this.mTitle);
         }
     }
 
