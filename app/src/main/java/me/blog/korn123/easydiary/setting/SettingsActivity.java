@@ -170,11 +170,13 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         if (fontDir.exists() && fontDir.listFiles().length > 0) {
             ListPreference temp = (ListPreference) preference;
             String[] listFont = fontDir.list();
-            CharSequence[] entries = new CharSequence[listFont.length];
-            CharSequence[] entryValues = new CharSequence[listFont.length];
+            CharSequence[] entries = new CharSequence[listFont.length + temp.getEntries().length];
+            CharSequence[] entryValues = new CharSequence[listFont.length + temp.getEntryValues().length];
+            System.arraycopy(temp.getEntries(), 0, entries, 0, temp.getEntries().length);
+            System.arraycopy(temp.getEntryValues(), 0, entryValues, 0, temp.getEntryValues().length);
             for (int i = 0; i < listFont.length; i++) {
-                entries[i] = FilenameUtils.getBaseName(listFont[i]);
-                entryValues[i] = listFont[i];
+                entries[i + temp.getEntries().length] = FilenameUtils.getBaseName(listFont[i]);
+                entryValues[i + temp.getEntries().length] = listFont[i];
             }
             temp.setEntries(entries);
             temp.setEntryValues(entryValues);
